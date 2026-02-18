@@ -1,0 +1,12 @@
+# client/runtime (never commit)
+extracts/
+logs/
+outputs/
+.env
+*.log
+*.zip
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
