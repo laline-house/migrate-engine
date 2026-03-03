@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Laynhapuy ERP — Data Relationship Map</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', Arial, sans-serif; background: #0f1923; color: #e0e0e0; overflow: hidden; }
+
+#header {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: linear-gradient(135deg, #1a2a3a 0%, #0f1923 100%);
+    border-bottom: 1px solid #2a4a6a; padding: 8px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+}
+#header h1 { font-size: 15px; color: #7eb8e0; font-weight: 600; }
+#header .subtitle { font-size: 11px; color: #6a8a9a; margin-left: 10px; }
+
+#controls {
+    display: flex; gap: 6px; align-items: center;
+}
+.btn {
+    padding: 4px 10px; border-radius: 4px; border: 1px solid #3a5a7a;
+    background: #1a2a3a; color: #a0c0d8; cursor: pointer; font-size: 10px;
+    transition: all 0.2s; white-space: nowrap;
+}
+.btn:hover { background: #2a4a6a; color: #fff; }
+.btn.active { background: #2a6090; border-color: #4a90c0; color: #fff; }
+.btn.help-btn { background: #1a4a2a; border-color: #3a8a5a; color: #7ec8a0; }
+.btn.help-btn:hover { background: #2a6a3a; color: #fff; }
+
+/* Search */
+#search-container {
+    position: fixed; top: 44px; right: 10px; z-index: 95;
+    display: flex; gap: 6px; align-items: center;
+}
+#search-input {
+    background: #1a2a3a; border: 1px solid #3a5a7a; border-radius: 4px;
+    padding: 5px 10px; color: #e0e0e0; font-size: 11px; width: 200px;
+    outline: none; font-family: 'Segoe UI', Arial;
+}
+#search-input:focus { border-color: #4a90c0; }
+#search-input::placeholder { color: #4a6a7a; }
+#search-results {
+    position: absolute; top: 30px; right: 0; background: rgba(15,25,35,0.98);
+    border: 1px solid #3a5a7a; border-radius: 4px; max-height: 250px;
+    overflow-y: auto; display: none; min-width: 250px;
+}
+.search-item {
+    padding: 6px 10px; cursor: pointer; font-size: 11px; border-bottom: 1px solid #1a2a3a;
+    display: flex; justify-content: space-between; align-items: center;
+}
+.search-item:hover { background: #2a4a6a; }
+.search-item .si-module { font-size: 9px; color: #6a8a9a; }
+
+/* Legend */
+#legend {
+    position: fixed; top: 44px; left: 10px; z-index: 90;
+    background: rgba(15,25,35,0.95); border: 1px solid #2a4a6a;
+    border-radius: 6px; padding: 8px 10px; font-size: 10px; min-width: 150px;
+}
+#legend h3 { color: #7eb8e0; margin-bottom: 4px; font-size: 11px; }
+.legend-item { display: flex; align-items: center; margin: 2px 0; cursor: pointer; opacity: 0.9; }
+.legend-item:hover { opacity: 1; }
+.legend-dot { width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; flex-shrink: 0; }
+.legend-count { color: #6a8a9a; margin-left: auto; padding-left: 8px; }
+
+/* Tooltip */
+#tooltip {
+    position: fixed; z-index: 200; pointer-events: none; display: none;
+    background: rgba(10,20,30,0.97); border: 1px solid #3a6a9a;
+    border-radius: 6px; padding: 12px 14px; max-width: 380px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+#tooltip h4 { color: #7eb8e0; font-size: 13px; margin-bottom: 3px; }
+#tooltip .tt-module { color: #6a8a9a; font-size: 10px; margin-bottom: 5px; }
+#tooltip .tt-detail { font-size: 11px; color: #b0c8d8; line-height: 1.4; }
+#tooltip .tt-detail b { color: #e0e0e0; }
+#tooltip .tt-joins { margin-top: 5px; padding-top: 5px; border-top: 1px solid #2a4a6a; }
+#tooltip .tt-join-item { font-size: 10px; color: #90b0c0; margin: 1px 0; }
+
+/* Join Path Finder */
+#pathfinder {
+    position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%); z-index: 95;
+    background: rgba(15,25,35,0.97); border: 1px solid #2a4a6a;
+    border-radius: 8px; padding: 12px 16px; min-width: 500px; max-width: 700px;
+    display: none;
+}
+#pathfinder h3 { color: #7eb8e0; font-size: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+#pathfinder .pf-close { cursor: pointer; color: #6a8a9a; font-size: 16px; }
+#pathfinder .pf-close:hover { color: #fff; }
+.pf-selectors { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+.pf-select {
+    background: #1a2a3a; border: 1px solid #3a5a7a; border-radius: 4px;
+    padding: 5px 8px; color: #e0e0e0; font-size: 11px; flex: 1;
+    outline: none; font-family: 'Segoe UI', Arial;
+}
+.pf-select:focus { border-color: #4a90c0; }
+.pf-arrow { color: #4a90c0; font-size: 18px; font-weight: bold; }
+#path-result {
+    min-height: 30px; font-size: 11px; line-height: 1.8;
+}
+.path-node {
+    display: inline-block; padding: 2px 8px; border-radius: 3px;
+    margin: 1px; font-weight: 600; font-size: 11px;
+}
+.path-arrow { color: #4a90c0; margin: 0 2px; font-weight: bold; }
+.path-via { color: #6a8a9a; font-size: 10px; margin: 0 2px; }
+.path-none { color: #e07a5f; font-style: italic; }
+.path-info { color: #6a8a9a; font-size: 10px; margin-top: 4px; }
+
+/* How To Use Guide */
+#guide-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 300;
+    background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center;
+}
+#guide-overlay.visible { display: flex; }
+#guide {
+    background: #1a2a3a; border: 1px solid #3a6a9a; border-radius: 10px;
+    padding: 28px 32px; max-width: 560px; width: 90%; max-height: 85vh; overflow-y: auto;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+}
+#guide h2 { color: #7eb8e0; font-size: 18px; margin-bottom: 16px; }
+#guide h3 { color: #4a90c0; font-size: 13px; margin: 14px 0 6px; }
+#guide p { font-size: 12px; line-height: 1.7; color: #b0c8d8; margin-bottom: 8px; }
+#guide .guide-key { display: inline-block; padding: 1px 6px; background: #2a4a6a; border-radius: 3px; font-size: 10px; color: #c0d8e8; margin: 0 2px; }
+#guide .guide-close {
+    display: block; margin: 18px auto 0; padding: 8px 24px; background: #2a6090;
+    border: none; border-radius: 4px; color: #fff; cursor: pointer; font-size: 12px;
+}
+#guide .guide-close:hover { background: #3a80b0; }
+#guide .guide-example {
+    background: #0f1923; border: 1px solid #2a4a6a; border-radius: 4px;
+    padding: 8px 12px; margin: 6px 0; font-size: 11px; color: #90b8c8;
+}
+
+/* SVG */
+svg { width: 100vw; height: 100vh; }
+.link { stroke-opacity: 0.25; fill: none; }
+.link.highlighted { stroke-opacity: 1; stroke-width: 2.5px !important; }
+.link.path-highlighted { stroke-opacity: 1; stroke-width: 3.5px !important; stroke: #fee440 !important; }
+.link.faded { stroke-opacity: 0.04; }
+.node-group { cursor: pointer; }
+.node-circle { stroke-width: 1.5px; transition: all 0.15s; }
+.node-circle.highlighted { stroke-width: 3px; filter: brightness(1.3); }
+.node-circle.path-highlighted { stroke-width: 4px; filter: brightness(1.5) drop-shadow(0 0 6px rgba(254,228,64,0.5)); }
+.node-circle.faded { opacity: 0.12; }
+.node-label { font-size: 8px; fill: #a0b8c8; pointer-events: none; font-family: 'Segoe UI', Arial; }
+.node-label.highlighted { fill: #ffffff; font-weight: 600; font-size: 9px; }
+.node-label.path-highlighted { fill: #fee440; font-weight: 700; font-size: 10px; }
+.node-label.faded { opacity: 0.08; }
+.link-label { font-size: 7px; fill: #4a6a7a; pointer-events: none; display: none; }
+.link-label.highlighted { display: block; fill: #90c0d8; }
+.link-label.path-highlighted { display: block; fill: #fee440; font-size: 8px; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div id="header">
+    <div style="display:flex;align-items:baseline;">
+        <h1>Laynhapuy ERP — Data Relationship Map</h1>
+        <span class="subtitle">85 tables · ~100 relationships · Click any table to explore</span>
+    </div>
+    <div id="controls">
+        <button class="btn active" onclick="showAll()">All</button>
+        <button class="btn" onclick="filterModule('GL')">Finance</button>
+        <button class="btn" onclick="filterModule('Payroll')">Payroll</button>
+        <button class="btn" onclick="filterModule('AP/AR')">AP/AR</button>
+        <button class="btn" onclick="filterModule('Assets')">Assets</button>
+        <button class="btn" onclick="filterModule('Ops')">Plant/Maint</button>
+        <button class="btn" onclick="filterModule('Stock/WO')">Stock/WO</button>
+        <button class="btn" onclick="togglePathfinder()" id="pf-btn">🔗 Join Finder</button>
+        <button class="btn help-btn" onclick="showGuide()">? Help</button>
+    </div>
+</div>
+
+<div id="search-container">
+    <input id="search-input" type="text" placeholder="🔍 Search tables..." autocomplete="off">
+    <div id="search-results"></div>
+</div>
+
+<div id="legend"></div>
+<div id="tooltip"></div>
+
+<!-- JOIN PATH FINDER -->
+<div id="pathfinder">
+    <h3>
+        🔗 Join Path Finder — How do I get from one table to another?
+        <span class="pf-close" onclick="togglePathfinder()">✕</span>
+    </h3>
+    <div class="pf-selectors">
+        <select id="pf-from" class="pf-select"><option value="">Select starting table...</option></select>
+        <span class="pf-arrow">→</span>
+        <select id="pf-to" class="pf-select"><option value="">Select target table...</option></select>
+        <button class="btn" onclick="findPath()" style="padding:5px 14px;">Find Path</button>
+    </div>
+    <div id="path-result"><span style="color:#6a8a9a;font-size:11px;">Select two tables and click "Find Path" to see how they connect.</span></div>
+</div>
+
+<!-- HOW TO USE GUIDE -->
+<div id="guide-overlay">
+    <div id="guide">
+        <h2>📖 How to Use This Map</h2>
+        <p>This interactive map shows all 85 data tables in the Laynhapuy ERP system and how they connect to each other. Use it to understand which tables you need to join when building reports.</p>
+
+        <h3>🖱️ Exploring the Map</h3>
+        <p><span class="guide-key">Click</span> any table (circle) to highlight all its connections. Click it again or click empty space to deselect.</p>
+        <p><span class="guide-key">Hover</span> over any table to see its details — name, module, field count, description, and all relationships.</p>
+        <p><span class="guide-key">Scroll</span> to zoom in and out. <span class="guide-key">Drag</span> the background to pan around.</p>
+        <p><span class="guide-key">Drag</span> any table circle to rearrange the layout.</p>
+
+        <h3>🔍 Searching</h3>
+        <p>Type in the search box (top right) to find a table by name. Click a result to zoom to that table and highlight its connections.</p>
+
+        <h3>📂 Module Filters</h3>
+        <p>Use the buttons at the top to show only tables from a specific module area. "All" shows everything. The filter also shows directly connected tables from other modules so you can see cross-module relationships.</p>
+
+        <h3>🔗 Join Path Finder</h3>
+        <p>This is the key tool for report building. Click <span class="guide-key">🔗 Join Finder</span> to open it, then select two tables to see exactly how they connect — which intermediate tables you need to join through.</p>
+        <div class="guide-example">
+            <strong>Example:</strong> "I want to show the creditor name on a purchase order."<br>
+            → Select <em>Purchase Orders</em> → <em>Creditor Master</em><br>
+            → Result: PO → CRS (via Creditor Code) — a direct join!
+        </div>
+        <div class="guide-example">
+            <strong>Example:</strong> "I want to see which GL accounts an employee's pay was charged to."<br>
+            → Select <em>Pay Work History</em> → <em>Chart of Accounts</em><br>
+            → Result: PAYWORK_HIST → COA (via Cost Centre) — direct join!
+        </div>
+
+        <h3>🎨 What the Colours Mean</h3>
+        <p>Each colour represents a module: <span style="color:#4a90d9;">■</span> General Ledger, <span style="color:#e07a5f;">■</span> Payroll, <span style="color:#81b29a;">■</span> Creditors, <span style="color:#f2cc8f;">■</span> Debtors, <span style="color:#9b5de5;">■</span> Assets, <span style="color:#f15bb5;">■</span> Plant, <span style="color:#00bbf9;">■</span> Maintenance, <span style="color:#00f5d4;">■</span> Stock, <span style="color:#fee440;">■</span> Work Orders, <span style="color:#ff8fab;">■</span> Grants.</p>
+        <p>Bigger circles = more data fields. The largest ones (Payroll Master, Asset Register) have 100+ fields each.</p>
+
+        <h3>💡 Tips</h3>
+        <p>The <strong>Chart of Accounts (COA)</strong> is the central hub — nearly every module connects to it for GL posting. If you're building a financial report, COA is almost always in the join path.</p>
+
+        <button class="guide-close" onclick="hideGuide()">Got it, let's explore!</button>
+    </div>
+</div>
+
+<svg></svg>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script>
+// Check first visit
+if(!localStorage.getItem('erd_visited')) {
+    document.getElementById('guide-overlay').classList.add('visible');
+    localStorage.setItem('erd_visited','1');
+}
+
+function showGuide() { document.getElementById('guide-overlay').classList.add('visible'); }
+function hideGuide() { document.getElementById('guide-overlay').classList.remove('visible'); }
+document.getElementById('guide-overlay').addEventListener('click', e => { if(e.target.id==='guide-overlay') hideGuide(); });
+
+const moduleColors = {
+    'GL':       { color: '#4a90d9', label: 'General Ledger' },
+    'Payroll':  { color: '#e07a5f', label: 'Payroll' },
+    'Creditors':{ color: '#81b29a', label: 'Creditors/AP' },
+    'Debtors':  { color: '#f2cc8f', label: 'Debtors/AR' },
+    'Assets':   { color: '#9b5de5', label: 'Assets' },
+    'Plant':    { color: '#f15bb5', label: 'Plant/Fleet' },
+    'Maint':    { color: '#00bbf9', label: 'Maintenance' },
+    'Stock':    { color: '#00f5d4', label: 'Stock/Stores' },
+    'WO':       { color: '#fee440', label: 'Work Orders' },
+    'Grants':   { color: '#ff8fab', label: 'Grants' },
+    'Reference':{ color: '#6a7a8a', label: 'Reference' },
+    'Bank':     { color: '#48bfe3', label: 'Bank Rec' },
+    'Receipting':{ color: '#72efdd', label: 'Receipting' },
+};
+
+const moduleGroups = {
+    'GL': ['GL','Bank','Receipting','Reference'],
+    'Payroll': ['Payroll'],
+    'AP/AR': ['Creditors','Debtors'],
+    'Assets': ['Assets'],
+    'Ops': ['Plant','Maint'],
+    'Stock/WO': ['Stock','WO','Grants'],
+};
+
+const nodes = [
+    { id:'COA', label:'Chart of Accounts', module:'GL', fields:'~30', layer:1, desc:'The backbone of all finance — every transaction posts here', keys:'Account (Sub-Prog + CC + Element)' },
+    { id:'GLJNL', label:'GL Journals', module:'GL', fields:'~20', layer:2, desc:'All general ledger transactions', keys:'Journal ID → COA account' },
+    { id:'SUB_PROG', label:'Sub-Programmes', module:'GL', fields:'~8', layer:1, desc:'Sub-programme codes (part of account key)', keys:'Code → COA' },
+    { id:'COST_CENTRES', label:'Cost Centres', module:'GL', fields:'~10', layer:1, desc:'Cost centre codes (part of account key)', keys:'Code → COA' },
+    { id:'ELEMENT_CODES', label:'Element Codes', module:'GL', fields:'~10', layer:1, desc:'Income/expense element codes (part of account key)', keys:'Code → COA' },
+    { id:'JOB_MASTER', label:'Job Master', module:'GL', fields:'~22', layer:1, desc:'Works costing / job tracking', keys:'Job Code → COA account' },
+    { id:'CC_TEMPLATES', label:'CC Templates', module:'GL', fields:'~5', layer:1, desc:'Cost centre default templates', keys:'Template → Cost Centres' },
+    { id:'AUTH_OFFICERS', label:'Auth Officers', module:'GL', fields:'~6', layer:1, desc:'Authorising officers for approvals', keys:'Officer Code' },
+    { id:'DIVISIONS', label:'Divisions', module:'Reference', fields:'2', layer:0, desc:'Organisation divisions', keys:'Div Code' },
+    { id:'MAIN_DEPTS', label:'Main Depts', module:'Reference', fields:'2', layer:0, desc:'Main departments', keys:'Dept Code' },
+    { id:'IE_CODES', label:'IE Codes', module:'Reference', fields:'4', layer:0, desc:'Income vs expense category', keys:'IE Code' },
+    { id:'RPT_CODES', label:'Report Codes', module:'Reference', fields:'4', layer:0, desc:'Financial reporting codes', keys:'Report Code' },
+    { id:'CATEGORIES', label:'Categories', module:'Reference', fields:'5', layer:0, desc:'GL categories', keys:'Cat Code' },
+    { id:'PROGRAMMES', label:'Programmes', module:'Reference', fields:'~6', layer:0, desc:'Programme codes', keys:'Programme Code' },
+    { id:'SCHEDULES', label:'Schedules', module:'Reference', fields:'~3', layer:0, desc:'Reporting schedules', keys:'Schedule Code' },
+    { id:'ITEMS', label:'Items', module:'Reference', fields:'~5', layer:0, desc:'Item codes', keys:'Item Code' },
+    { id:'FUNDS', label:'Funds', module:'Reference', fields:'~4', layer:0, desc:'Fund source codes', keys:'Fund Code' },
+    { id:'CHARGE_TYPE', label:'Charge Types', module:'Reference', fields:'4', layer:0, desc:'Charge type codes', keys:'Charge Code' },
+    { id:'BANKS', label:'Banks', module:'Bank', fields:'~4', layer:0, desc:'Bank master list', keys:'Bank Code' },
+    { id:'BANK_BRANCHES', label:'Bank Branches', module:'Bank', fields:'7', layer:0, desc:'BSB directory (public reference data)', keys:'BSB Code' },
+    { id:'BANK_FEES', label:'Bank Fees', module:'Bank', fields:'~5', layer:0, desc:'Bank fee types', keys:'Fee Code' },
+    { id:'BANK_RECON', label:'Bank Recon', module:'Bank', fields:'~10', layer:2, desc:'Monthly bank reconciliation', keys:'Bank + Period → COA' },
+    { id:'BANK_STMT', label:'Bank Statements', module:'Bank', fields:'~10', layer:2, desc:'Imported bank statement entries', keys:'Bank + Date' },
+    { id:'CASH_RECEIPTS', label:'Cash Receipts', module:'Receipting', fields:'~25', layer:2, desc:'Receipt transactions', keys:'Receipt No → Debtor' },
+    { id:'CASH_JNL', label:'Cash Journals', module:'Receipting', fields:'~15', layer:2, desc:'Cash journal entries', keys:'Journal ID → COA' },
+    { id:'CRS', label:'Creditor Master', module:'Creditors', fields:'~71', layer:1, desc:'Suppliers/creditors — contains BSB & account (PII)', keys:'Creditor Code' },
+    { id:'PO', label:'Purchase Orders', module:'Creditors', fields:'~62', layer:2, desc:'Purchase orders (status 1=draft → 7=complete)', keys:'PO Number → Creditor' },
+    { id:'REQS', label:'Requisitions', module:'Creditors', fields:'~43', layer:2, desc:'Purchase requisitions (requests for POs)', keys:'Req Number → PO' },
+    { id:'REQS_HIST', label:'Reqs History', module:'Creditors', fields:'~43', layer:2, desc:'Archived historical requisitions', keys:'Req Number' },
+    { id:'ITV_CONTRACTS', label:'Contracts', module:'Creditors', fields:'~52', layer:2, desc:'Contract register with milestones', keys:'Contract No → Creditor' },
+    { id:'PO_ADDRESS', label:'PO Addresses', module:'Creditors', fields:'2', layer:0, desc:'Delivery addresses for POs', keys:'Address Code' },
+    { id:'CMF', label:'Debtor Master', module:'Debtors', fields:'~68', layer:1, desc:'Customers/debtors — contains DD bank details (PII)', keys:'Debtor Code' },
+    { id:'PAYMAS', label:'Payroll Master', module:'Payroll', fields:'~160', layer:1, desc:'Employee master file — biggest table, 24 PII fields', keys:'Employee Number' },
+    { id:'PAYWORK_HIST', label:'Pay Work History', module:'Payroll', fields:'~100', layer:2, desc:'Core payroll transactions — gross, PAYG, super', keys:'Employee + Pay Period' },
+    { id:'TIMECARD', label:'Timecards', module:'Payroll', fields:'~30', layer:2, desc:'Timesheet entries', keys:'Employee + Period' },
+    { id:'CERT_CURRENT', label:'Certs (Current)', module:'Payroll', fields:'~30', layer:2, desc:'Current year payment summaries (group certs)', keys:'Employee' },
+    { id:'CERT_PRIOR', label:'Certs (Prior)', module:'Payroll', fields:'~30', layer:2, desc:'Prior year payment summaries', keys:'Employee + Year' },
+    { id:'CERT_HIST', label:'Cert History', module:'Payroll', fields:'~15', layer:2, desc:'Certificate issue history', keys:'Employee + Year' },
+    { id:'HIST_SUMMARY', label:'History Summary', module:'Payroll', fields:'~10', layer:2, desc:'Pay totals summary by year', keys:'Employee + Year' },
+    { id:'HIST_DETAIL', label:'History Detail', module:'Payroll', fields:'~15', layer:2, desc:'Pay amounts by item by year', keys:'Employee + Year + Item' },
+    { id:'PAY_ITEM', label:'Pay Items', module:'Payroll', fields:'~20', layer:0, desc:'Types of pay (ordinary, overtime, allowances, etc.)', keys:'Item Code' },
+    { id:'LEAVE_TYPE', label:'Leave Types', module:'Payroll', fields:'~8', layer:0, desc:'Types of leave (annual, sick, LSL, etc.)', keys:'Leave Code' },
+    { id:'AWARD', label:'Awards', module:'Payroll', fields:'~15', layer:0, desc:'Industrial awards / agreements', keys:'Award Code' },
+    { id:'ROSTER_TYPE', label:'Roster Types', module:'Payroll', fields:'~4', layer:0, desc:'Roster patterns', keys:'Roster Code' },
+    { id:'PAY_PROFILE', label:'Pay Profiles', module:'Payroll', fields:'~6', layer:0, desc:'Pay frequency/profile codes', keys:'Profile Code' },
+    { id:'LEAVE_ACCRUAL', label:'Leave Accruals', module:'Payroll', fields:'~10', layer:0, desc:'Leave accrual calculation rules', keys:'Accrual Code' },
+    { id:'PAY_STATS', label:'Payroll Stats', module:'Payroll', fields:'~5', layer:0, desc:'Statistical reporting codes', keys:'Stat Code' },
+    { id:'DEPARTMENT', label:'PR Departments', module:'Payroll', fields:'~5', layer:0, desc:'Payroll department codes', keys:'Dept Code' },
+    { id:'CLASSIFICATION', label:'Classifications', module:'Payroll', fields:'~4', layer:0, desc:'Employee classification levels', keys:'Class Code' },
+    { id:'ALLOWANCE', label:'Allowances', module:'Payroll', fields:'~5', layer:0, desc:'Allowance types', keys:'Allow Code' },
+    { id:'LABOUR_CODES', label:'Labour Codes', module:'Payroll', fields:'~5', layer:0, desc:'Labour costing codes', keys:'Labour Code' },
+    { id:'AR_ASSET', label:'Asset Register', module:'Assets', fields:'~108', layer:1, desc:'Financial asset register — cost, depreciation, tax values', keys:'Asset Code' },
+    { id:'ACLASS', label:'Asset Class', module:'Assets', fields:'9', layer:0, desc:'Asset classification with depreciation defaults', keys:'Class Code' },
+    { id:'DEPN_METHODS', label:'Depn Methods', module:'Assets', fields:'5', layer:0, desc:'Depreciation calculation methods (SL, reducing balance)', keys:'Method Code' },
+    { id:'ASM_ASSET', label:'Asset Mgmt', module:'Assets', fields:'~55', layer:1, desc:'Operational asset data — projects, maintenance, GIS', keys:'ASM Code → Asset Register' },
+    { id:'ASM_COMP', label:'Components', module:'Assets', fields:'~45', layer:1, desc:'Physical components of assets — condition tracking', keys:'Component → Asset Mgmt' },
+    { id:'ASM_DEFECTS', label:'ASM Defects', module:'Assets', fields:'~17', layer:2, desc:'Asset defect tracking with risk ratings', keys:'Defect → Asset Mgmt' },
+    { id:'ASM_INSP', label:'Inspections', module:'Assets', fields:'~22', layer:2, desc:'Asset inspection records', keys:'Inspection → Asset Mgmt' },
+    { id:'PLANT_MASTER', label:'Plant Master', module:'Plant', fields:'~55', layer:1, desc:'Vehicle and plant equipment register', keys:'Plant No → Asset Register' },
+    { id:'WM_MASTER', label:'Workshop', module:'Plant', fields:'~30', layer:1, desc:'Workshop service record for each plant item', keys:'Code = Plant Number' },
+    { id:'FILE_BORR', label:'Operators', module:'Plant', fields:'~18', layer:1, desc:'Internal staff / operators / correspondents', keys:'Code → Employee Number' },
+    { id:'WM_SERVICE', label:'Maint Orders', module:'Maint', fields:'~55', layer:2, desc:'Maintenance work orders — scheduled & reactive', keys:'Order No → Plant' },
+    { id:'WM_DEFECTS', label:'Defects', module:'Maint', fields:'14', layer:2, desc:'Reported plant/vehicle defects', keys:'Report No → Service Order' },
+    { id:'WM_INCIDENTS', label:'Incidents', module:'Maint', fields:'16', layer:2, desc:'Vehicle/plant incidents and insurance claims', keys:'Incident No → Service Order' },
+    { id:'WM_TEMPLATES', label:'Maint Templates', module:'Maint', fields:'~24', layer:1, desc:'Preventative maintenance schedule templates', keys:'Template Code' },
+    { id:'WM_PICKLISTS', label:'Stock Picklists', module:'Maint', fields:'6', layer:1, desc:'Pre-defined stock lists for maintenance jobs', keys:'Picklist Code → Stock' },
+    { id:'WM_SHUTDOWNS', label:'Shutdowns', module:'Maint', fields:'7', layer:2, desc:'Plant shutdown/standdown tracking', keys:'Shutdown No → Plant' },
+    { id:'WM_SVC_TYPES', label:'Maint Types', module:'Maint', fields:'~16', layer:0, desc:'Maintenance service type codes', keys:'Type Code' },
+    { id:'WM_ACTS', label:'Work Types', module:'Maint', fields:'3', layer:0, desc:'Maintenance activity/work type codes', keys:'Activity Code' },
+    { id:'WM_SCHED', label:'Schedule Types', module:'Maint', fields:'2', layer:0, desc:'Schedule frequency types', keys:'Schedule Code' },
+    { id:'WM_VEHCATS', label:'Vehicle Cats', module:'Maint', fields:'2', layer:0, desc:'Vehicle category codes', keys:'Cat Code' },
+    { id:'WM_VEHMODS', label:'Vehicle Models', module:'Maint', fields:'2', layer:0, desc:'Vehicle model codes', keys:'Model Code' },
+    { id:'WM_LICTYPES', label:'Licence Types', module:'Maint', fields:'2', layer:0, desc:'Licence type codes', keys:'Type Code' },
+    { id:'WM_BUSUNITS', label:'Business Units', module:'Maint', fields:'4', layer:0, desc:'Business unit/directorate codes', keys:'Unit Code' },
+    { id:'WM_TEAMS', label:'Teams', module:'Maint', fields:'2', layer:0, desc:'Workshop team codes', keys:'Team Code' },
+    { id:'WM_OWNERS', label:'Plant Owners', module:'Maint', fields:'2', layer:0, desc:'Equipment owner codes', keys:'Owner Code' },
+    { id:'WM_DEF_TYPES', label:'Defect Types', module:'Maint', fields:'2', layer:0, desc:'Defect type codes', keys:'Type Code' },
+    { id:'WM_DEF_CAUSES', label:'Defect Causes', module:'Maint', fields:'3', layer:0, desc:'Defect cause codes', keys:'Cause Code' },
+    { id:'WM_INC_TYPES', label:'Incident Types', module:'Maint', fields:'3', layer:0, desc:'Incident type codes', keys:'Type Code' },
+    { id:'PMF', label:'Stock Master', module:'Stock', fields:'~17', layer:1, desc:'Stock item master file — products and parts', keys:'Stock Code' },
+    { id:'STK_COSTS', label:'Stock Costs', module:'Stock', fields:'10', layer:2, desc:'Stock cost transaction history', keys:'Stock Code + Date' },
+    { id:'STK_USAGE', label:'Stock Usage', module:'Stock', fields:'6', layer:2, desc:'Stock consumption by location and product', keys:'Location + Product' },
+    { id:'FGI', label:'Inventory', module:'Stock', fields:'~25', layer:2, desc:'Current inventory — stock on hand, valuations', keys:'Location + Product → Stock Master' },
+    { id:'LOCNS', label:'Locations', module:'Stock', fields:'4', layer:0, desc:'Stock storage locations (stores, depots)', keys:'Location Code' },
+    { id:'PGRPS', label:'Product Groups', module:'Stock', fields:'7', layer:0, desc:'Product groups with GL account mappings', keys:'Group Code → COA' },
+    { id:'W_ORDERS', label:'Work Orders', module:'WO', fields:'~35', layer:2, desc:'Work orders — tasks, employees, asset maintenance', keys:'WO Number → COA, Asset, Employee' },
+    { id:'TASK_GROUPS', label:'Task Groups', module:'WO', fields:'4', layer:0, desc:'Task groupings for work orders', keys:'Group Code' },
+    { id:'WO_CLASS', label:'WO Classes', module:'WO', fields:'4', layer:0, desc:'Work order classification types', keys:'Class Code' },
+    { id:'TCAG_GRANT', label:'Grants', module:'Grants', fields:'~25', layer:2, desc:'Grant management — milestones, funding, income/expense', keys:'Grant No → COA' },
+];
+
+const links = [
+    { source:'GLJNL', target:'COA', label:'GL Account', type:'fk' },
+    { source:'SUB_PROG', target:'COA', label:'sub-programme key', type:'compose' },
+    { source:'COST_CENTRES', target:'COA', label:'cost centre key', type:'compose' },
+    { source:'ELEMENT_CODES', target:'COA', label:'element key', type:'compose' },
+    { source:'JOB_MASTER', target:'COA', label:'GL account', type:'fk' },
+    { source:'CC_TEMPLATES', target:'COST_CENTRES', label:'template for', type:'fk' },
+    { source:'COA', target:'PROGRAMMES', label:'programme', type:'fk' },
+    { source:'COA', target:'DIVISIONS', label:'division', type:'fk' },
+    { source:'COA', target:'CATEGORIES', label:'category', type:'fk' },
+    { source:'COA', target:'SCHEDULES', label:'schedule', type:'fk' },
+    { source:'COA', target:'FUNDS', label:'fund', type:'fk' },
+    { source:'BANK_RECON', target:'BANKS', label:'bank code', type:'fk' },
+    { source:'BANK_RECON', target:'COA', label:'GL account', type:'fk' },
+    { source:'BANK_STMT', target:'BANKS', label:'bank code', type:'fk' },
+    { source:'BANK_BRANCHES', target:'BANKS', label:'parent bank', type:'fk' },
+    { source:'CASH_RECEIPTS', target:'CMF', label:'debtor code', type:'fk' },
+    { source:'CASH_RECEIPTS', target:'COA', label:'GL account', type:'fk' },
+    { source:'CASH_JNL', target:'COA', label:'GL account', type:'fk' },
+    { source:'PO', target:'CRS', label:'creditor code', type:'fk' },
+    { source:'PO', target:'COA', label:'GL account', type:'fk' },
+    { source:'REQS', target:'PO', label:'PO number', type:'fk' },
+    { source:'REQS', target:'CRS', label:'creditor code', type:'fk' },
+    { source:'REQS_HIST', target:'CRS', label:'creditor code', type:'fk' },
+    { source:'ITV_CONTRACTS', target:'CRS', label:'creditor code', type:'fk' },
+    { source:'CRS', target:'COA', label:'GL accounts', type:'fk' },
+    { source:'CRS', target:'BANK_BRANCHES', label:'BSB (bank branch)', type:'fk' },
+    { source:'CMF', target:'COA', label:'GL accounts', type:'fk' },
+    { source:'CMF', target:'BANK_BRANCHES', label:'DD BSB', type:'fk' },
+    { source:'PAYWORK_HIST', target:'PAYMAS', label:'employee number', type:'fk' },
+    { source:'PAYWORK_HIST', target:'COA', label:'cost centre', type:'fk' },
+    { source:'TIMECARD', target:'PAYMAS', label:'employee number', type:'fk' },
+    { source:'TIMECARD', target:'COA', label:'cost allocation', type:'fk' },
+    { source:'CERT_CURRENT', target:'PAYMAS', label:'employee', type:'fk' },
+    { source:'CERT_PRIOR', target:'PAYMAS', label:'employee', type:'fk' },
+    { source:'CERT_HIST', target:'PAYMAS', label:'employee', type:'fk' },
+    { source:'HIST_SUMMARY', target:'PAYMAS', label:'employee', type:'fk' },
+    { source:'HIST_DETAIL', target:'PAYMAS', label:'employee', type:'fk' },
+    { source:'PAYMAS', target:'PAY_ITEM', label:'pay items', type:'fk' },
+    { source:'PAYMAS', target:'LEAVE_TYPE', label:'leave types', type:'fk' },
+    { source:'PAYMAS', target:'AWARD', label:'award code', type:'fk' },
+    { source:'PAYMAS', target:'DEPARTMENT', label:'department', type:'fk' },
+    { source:'PAYMAS', target:'CLASSIFICATION', label:'classification', type:'fk' },
+    { source:'PAYMAS', target:'PAY_PROFILE', label:'pay profile', type:'fk' },
+    { source:'AR_ASSET', target:'ACLASS', label:'asset class', type:'fk' },
+    { source:'AR_ASSET', target:'DEPN_METHODS', label:'depn method', type:'fk' },
+    { source:'AR_ASSET', target:'COA', label:'GL + depn accounts', type:'fk' },
+    { source:'ASM_ASSET', target:'AR_ASSET', label:'register parent', type:'fk' },
+    { source:'ASM_COMP', target:'ASM_ASSET', label:'parent asset', type:'fk' },
+    { source:'ASM_DEFECTS', target:'ASM_ASSET', label:'asset', type:'fk' },
+    { source:'ASM_INSP', target:'ASM_ASSET', label:'asset', type:'fk' },
+    { source:'ASM_DEFECTS', target:'W_ORDERS', label:'resolving WO', type:'fk' },
+    { source:'PLANT_MASTER', target:'AR_ASSET', label:'asset number', type:'fk' },
+    { source:'PLANT_MASTER', target:'DIVISIONS', label:'division', type:'fk' },
+    { source:'PLANT_MASTER', target:'LOCNS', label:'location', type:'fk' },
+    { source:'PLANT_MASTER', target:'COA', label:'GL accounts', type:'fk' },
+    { source:'WM_MASTER', target:'PLANT_MASTER', label:'plant code', type:'fk' },
+    { source:'WM_MASTER', target:'WM_TEMPLATES', label:'maint template', type:'fk' },
+    { source:'WM_MASTER', target:'WM_VEHCATS', label:'vehicle category', type:'fk' },
+    { source:'WM_MASTER', target:'WM_VEHMODS', label:'vehicle model', type:'fk' },
+    { source:'WM_MASTER', target:'WM_BUSUNITS', label:'business unit', type:'fk' },
+    { source:'WM_MASTER', target:'WM_OWNERS', label:'owner', type:'fk' },
+    { source:'FILE_BORR', target:'PAYMAS', label:'employee number', type:'fk' },
+    { source:'WM_SERVICE', target:'WM_MASTER', label:'plant code', type:'fk' },
+    { source:'WM_SERVICE', target:'WM_SVC_TYPES', label:'service type', type:'fk' },
+    { source:'WM_SERVICE', target:'WM_ACTS', label:'work type', type:'fk' },
+    { source:'WM_SERVICE', target:'WM_SCHED', label:'schedule type', type:'fk' },
+    { source:'WM_SERVICE', target:'WM_TEAMS', label:'team', type:'fk' },
+    { source:'WM_SERVICE', target:'WM_TEMPLATES', label:'template', type:'fk' },
+    { source:'WM_SERVICE', target:'PMF', label:'stock items', type:'fk' },
+    { source:'WM_SERVICE', target:'CRS', label:'supplier reqs', type:'fk' },
+    { source:'WM_SERVICE', target:'WM_PICKLISTS', label:'stock picklist', type:'fk' },
+    { source:'WM_DEFECTS', target:'WM_SERVICE', label:'service order', type:'fk' },
+    { source:'WM_DEFECTS', target:'WM_DEF_TYPES', label:'defect type', type:'fk' },
+    { source:'WM_DEFECTS', target:'WM_DEF_CAUSES', label:'cause', type:'fk' },
+    { source:'WM_DEFECTS', target:'AR_ASSET', label:'asset', type:'fk' },
+    { source:'WM_INCIDENTS', target:'WM_SERVICE', label:'service order', type:'fk' },
+    { source:'WM_INCIDENTS', target:'WM_INC_TYPES', label:'incident type', type:'fk' },
+    { source:'WM_INCIDENTS', target:'AR_ASSET', label:'asset', type:'fk' },
+    { source:'WM_SHUTDOWNS', target:'PLANT_MASTER', label:'parent plant', type:'fk' },
+    { source:'WM_TEMPLATES', target:'WM_SVC_TYPES', label:'service types', type:'fk' },
+    { source:'WM_PICKLISTS', target:'PMF', label:'stock codes', type:'fk' },
+    { source:'FGI', target:'PMF', label:'product code', type:'fk' },
+    { source:'FGI', target:'LOCNS', label:'location', type:'fk' },
+    { source:'STK_COSTS', target:'PMF', label:'stock code', type:'fk' },
+    { source:'STK_COSTS', target:'LOCNS', label:'location', type:'fk' },
+    { source:'STK_USAGE', target:'PMF', label:'product', type:'fk' },
+    { source:'STK_USAGE', target:'LOCNS', label:'location', type:'fk' },
+    { source:'PMF', target:'PGRPS', label:'product group', type:'fk' },
+    { source:'PMF', target:'CRS', label:'supplier', type:'fk' },
+    { source:'PMF', target:'COST_CENTRES', label:'default CC', type:'fk' },
+    { source:'PGRPS', target:'COA', label:'GL codes', type:'fk' },
+    { source:'W_ORDERS', target:'COA', label:'GL account', type:'fk' },
+    { source:'W_ORDERS', target:'AR_ASSET', label:'asset', type:'fk' },
+    { source:'W_ORDERS', target:'ASM_ASSET', label:'asset mgmt code', type:'fk' },
+    { source:'W_ORDERS', target:'ASM_COMP', label:'components', type:'fk' },
+    { source:'W_ORDERS', target:'COST_CENTRES', label:'task CC', type:'fk' },
+    { source:'W_ORDERS', target:'PAYMAS', label:'employees', type:'fk' },
+    { source:'W_ORDERS', target:'WO_CLASS', label:'WO class', type:'fk' },
+    { source:'TCAG_GRANT', target:'COA', label:'GL accounts', type:'fk' },
+    { source:'TCAG_GRANT', target:'FILE_BORR', label:'resp officer', type:'fk' },
+];
+
+// ===== BUILD ADJACENCY FOR PATHFINDING =====
+const adjacency = {};
+nodes.forEach(n => adjacency[n.id] = []);
+links.forEach(l => {
+    const s = typeof l.source === 'object' ? l.source.id : l.source;
+    const t = typeof l.target === 'object' ? l.target.id : l.target;
+    adjacency[s].push({ node: t, label: l.label });
+    adjacency[t].push({ node: s, label: l.label });
+});
+
+function bfs(startId, endId) {
+    if(startId === endId) return [startId];
+    const visited = new Set([startId]);
+    const queue = [[startId]];
+    while(queue.length) {
+        const path = queue.shift();
+        const current = path[path.length-1];
+        for(const neighbor of (adjacency[current]||[])) {
+            if(visited.has(neighbor.node)) continue;
+            const newPath = [...path, neighbor.node];
+            if(neighbor.node === endId) return newPath;
+            visited.add(neighbor.node);
+            queue.push(newPath);
+        }
+    }
+    return null;
+}
+
+function getLinkLabel(fromId, toId) {
+    for(const l of links) {
+        const s = typeof l.source === 'object' ? l.source.id : l.source;
+        const t = typeof l.target === 'object' ? l.target.id : l.target;
+        if((s===fromId && t===toId) || (t===fromId && s===toId)) return l.label;
+    }
+    return '?';
+}
+
+// ===== PATHFINDER UI =====
+const pfFrom = document.getElementById('pf-from');
+const pfTo = document.getElementById('pf-to');
+const sorted = [...nodes].sort((a,b) => a.label.localeCompare(b.label));
+sorted.forEach(n => {
+    const mod = moduleColors[n.module]?.label || n.module;
+    pfFrom.innerHTML += `<option value="${n.id}">${n.label} (${mod})</option>`;
+    pfTo.innerHTML += `<option value="${n.id}">${n.label} (${mod})</option>`;
+});
+
+function togglePathfinder() {
+    const pf = document.getElementById('pathfinder');
+    const btn = document.getElementById('pf-btn');
+    if(pf.style.display === 'block') { pf.style.display = 'none'; btn.classList.remove('active'); clearPathHighlight(); }
+    else { pf.style.display = 'block'; btn.classList.add('active'); }
+}
+
+function findPath() {
+    const fromId = pfFrom.value, toId = pfTo.value;
+    const result = document.getElementById('path-result');
+    if(!fromId || !toId) { result.innerHTML = '<span class="path-none">Please select both tables.</span>'; return; }
+    if(fromId === toId) { result.innerHTML = '<span class="path-none">Same table selected — no join needed!</span>'; return; }
+
+    const path = bfs(fromId, toId);
+    if(!path) {
+        result.innerHTML = '<span class="path-none">No connection found between these tables. They may be in completely separate modules.</span>';
+        clearPathHighlight();
+        return;
+    }
+
+    let html = '<div style="margin-bottom:4px;">';
+    for(let i=0; i<path.length; i++) {
+        const node = nodes.find(n=>n.id===path[i]);
+        const col = moduleColors[node.module]?.color || '#666';
+        html += `<span class="path-node" style="background:${col}33;border:1px solid ${col};color:${col}">${node.label}</span>`;
+        if(i < path.length-1) {
+            const lbl = getLinkLabel(path[i], path[i+1]);
+            html += `<span class="path-arrow">→</span><span class="path-via">${lbl}</span><span class="path-arrow">→</span>`;
+        }
+    }
+    html += '</div>';
+
+    if(path.length === 2) {
+        html += `<div class="path-info">✅ Direct join — connect these two tables using the <strong>${getLinkLabel(path[0],path[1])}</strong> field.</div>`;
+    } else {
+        html += `<div class="path-info">🔗 ${path.length-1} joins needed. Join through ${path.length-2} intermediate table${path.length>3?'s':''}.</div>`;
+    }
+
+    result.innerHTML = html;
+    highlightPath(path);
+}
+
+function highlightPath(path) {
+    clearPathHighlight();
+    const pathSet = new Set(path);
+    const pathLinks = new Set();
+    for(let i=0; i<path.length-1; i++) {
+        pathLinks.add(path[i]+'→'+path[i+1]);
+        pathLinks.add(path[i+1]+'→'+path[i]);
+    }
+
+    nodeGroups.selectAll('.node-circle')
+        .classed('path-highlighted', n => pathSet.has(n.id))
+        .classed('faded', n => !pathSet.has(n.id));
+    nodeGroups.selectAll('.node-label')
+        .classed('path-highlighted', n => pathSet.has(n.id))
+        .classed('faded', n => !pathSet.has(n.id));
+    linkElements
+        .classed('path-highlighted', l => pathLinks.has(l.source.id+'→'+l.target.id))
+        .classed('faded', l => !pathLinks.has(l.source.id+'→'+l.target.id) && !pathLinks.has(l.target.id+'→'+l.source.id));
+    linkLabels
+        .classed('path-highlighted', l => pathLinks.has(l.source.id+'→'+l.target.id) || pathLinks.has(l.target.id+'→'+l.source.id));
+}
+
+function clearPathHighlight() {
+    nodeGroups.selectAll('.node-circle').classed('path-highlighted',false).classed('faded',false);
+    nodeGroups.selectAll('.node-label').classed('path-highlighted',false).classed('faded',false);
+    linkElements.classed('path-highlighted',false).classed('faded',false);
+    linkLabels.classed('path-highlighted',false);
+}
+
+// ===== LEGEND =====
+const legendEl = document.getElementById('legend');
+let legendHTML = '<h3>Modules</h3>';
+const moduleCounts = {};
+nodes.forEach(n => { moduleCounts[n.module] = (moduleCounts[n.module]||0)+1; });
+Object.entries(moduleColors).forEach(([key,val]) => {
+    if(moduleCounts[key]) {
+        legendHTML += `<div class="legend-item" onclick="filterByModule('${key}')">
+            <div class="legend-dot" style="background:${val.color}"></div>
+            <span>${val.label}</span>
+            <span class="legend-count">${moduleCounts[key]}</span>
+        </div>`;
+    }
+});
+legendEl.innerHTML = legendHTML;
+
+// ===== D3 GRAPH =====
+const width = window.innerWidth, height = window.innerHeight;
+const svg = d3.select('svg').attr('viewBox', [0,0,width,height]);
+const g = svg.append('g');
+const zoom = d3.zoom().scaleExtent([0.15, 5]).on('zoom', e => g.attr('transform', e.transform));
+svg.call(zoom);
+
+function nodeRadius(d) {
+    const f = parseInt(d.fields) || 5;
+    if(f > 80) return 20;
+    if(f > 40) return 15;
+    if(f > 15) return 11;
+    if(f > 5) return 8;
+    return 5;
+}
+
+const simulation = d3.forceSimulation(nodes)
+    .force('link', d3.forceLink(links).id(d=>d.id).distance(d => {
+        const s = nodes.find(n=>n.id===(d.source.id||d.source));
+        const t = nodes.find(n=>n.id===(d.target.id||d.target));
+        if(s && t && s.layer===0 && t.layer===0) return 40;
+        return 85;
+    }).strength(0.3))
+    .force('charge', d3.forceManyBody().strength(d => d.layer===0 ? -60 : -220))
+    .force('center', d3.forceCenter(width/2, height/2))
+    .force('collision', d3.forceCollide().radius(d => nodeRadius(d)+10))
+    .force('x', d3.forceX(width/2).strength(0.03))
+    .force('y', d3.forceY(height/2).strength(0.03));
+
+const linkElements = g.append('g').selectAll('line')
+    .data(links).join('line')
+    .attr('class', 'link')
+    .attr('stroke', '#2a5a8a')
+    .attr('stroke-width', 1);
+
+const linkLabels = g.append('g').selectAll('text')
+    .data(links).join('text')
+    .attr('class', 'link-label')
+    .text(d => d.label);
+
+const nodeGroups = g.append('g').selectAll('g')
+    .data(nodes).join('g')
+    .attr('class', 'node-group')
+    .call(d3.drag()
+        .on('start', (e,d) => { if(!e.active) simulation.alphaTarget(0.3).restart(); d.fx=d.x; d.fy=d.y; })
+        .on('drag', (e,d) => { d.fx=e.x; d.fy=e.y; })
+        .on('end', (e,d) => { if(!e.active) simulation.alphaTarget(0); d.fx=null; d.fy=null; })
+    );
+
+nodeGroups.append('circle')
+    .attr('class', 'node-circle')
+    .attr('r', d => nodeRadius(d))
+    .attr('fill', d => moduleColors[d.module]?.color || '#666')
+    .attr('stroke', d => d3.color(moduleColors[d.module]?.color || '#666').brighter(0.5));
+
+nodeGroups.append('text')
+    .attr('class', 'node-label')
+    .attr('dy', d => nodeRadius(d) + 11)
+    .attr('text-anchor', 'middle')
+    .text(d => d.label);
+
+// Tooltip
+const tooltip = document.getElementById('tooltip');
+nodeGroups.on('mouseover', (e,d) => {
+    const connected = links.filter(l => l.source.id===d.id || l.target.id===d.id);
+    let joinsHTML = connected.map(l => {
+        const other = l.source.id===d.id ? l.target : l.source;
+        const dir = l.source.id===d.id ? '→' : '←';
+        return `<div class="tt-join-item">${dir} ${other.label} <span style="color:#4a6a7a">(${l.label})</span></div>`;
+    }).join('');
+
+    tooltip.innerHTML = `
+        <h4>${d.label}</h4>
+        <div class="tt-module">${moduleColors[d.module]?.label || d.module} · Layer ${d.layer} · ${d.fields} fields</div>
+        <div class="tt-detail">${d.desc}</div>
+        <div class="tt-detail"><b>Key:</b> ${d.keys}</div>
+        ${connected.length ? `<div class="tt-joins"><div style="color:#6a8a9a;font-size:9px;margin-bottom:2px;">CONNECTS TO (${connected.length})</div>${joinsHTML}</div>` : ''}
+    `;
+    tooltip.style.display = 'block';
+    const tx = Math.min(e.clientX+15, window.innerWidth-400);
+    const ty = Math.min(e.clientY-10, window.innerHeight-300);
+    tooltip.style.left = tx + 'px';
+    tooltip.style.top = ty + 'px';
+}).on('mousemove', e => {
+    const tx = Math.min(e.clientX+15, window.innerWidth-400);
+    const ty = Math.min(e.clientY-10, window.innerHeight-300);
+    tooltip.style.left = tx + 'px';
+    tooltip.style.top = ty + 'px';
+}).on('mouseout', () => { tooltip.style.display = 'none'; });
+
+// Click highlight
+let selectedNode = null;
+nodeGroups.on('click', (e, d) => {
+    e.stopPropagation();
+    if(selectedNode === d.id) { selectedNode = null; resetHighlight(); return; }
+    selectedNode = d.id;
+    highlightConnections(d);
+});
+svg.on('click', () => { selectedNode = null; resetHighlight(); clearPathHighlight(); });
+
+function highlightConnections(d) {
+    clearPathHighlight();
+    const connectedIds = new Set([d.id]);
+    links.forEach(l => {
+        if(l.source.id===d.id) connectedIds.add(l.target.id);
+        if(l.target.id===d.id) connectedIds.add(l.source.id);
+    });
+    nodeGroups.selectAll('.node-circle')
+        .classed('highlighted', n => connectedIds.has(n.id))
+        .classed('faded', n => !connectedIds.has(n.id));
+    nodeGroups.selectAll('.node-label')
+        .classed('highlighted', n => connectedIds.has(n.id))
+        .classed('faded', n => !connectedIds.has(n.id));
+    linkElements
+        .classed('highlighted', l => (l.source.id===d.id || l.target.id===d.id))
+        .classed('faded', l => !(l.source.id===d.id || l.target.id===d.id));
+    linkLabels.classed('highlighted', l => (l.source.id===d.id || l.target.id===d.id));
+}
+
+function resetHighlight() {
+    nodeGroups.selectAll('.node-circle').classed('highlighted',false).classed('faded',false);
+    nodeGroups.selectAll('.node-label').classed('highlighted',false).classed('faded',false);
+    linkElements.classed('highlighted',false).classed('faded',false);
+    linkLabels.classed('highlighted',false);
+}
+
+// ===== SEARCH =====
+const searchInput = document.getElementById('search-input');
+const searchResults = document.getElementById('search-results');
+
+searchInput.addEventListener('input', () => {
+    const q = searchInput.value.toLowerCase().trim();
+    if(!q) { searchResults.style.display = 'none'; return; }
+    const matches = nodes.filter(n =>
+        n.label.toLowerCase().includes(q) ||
+        n.id.toLowerCase().includes(q) ||
+        n.desc.toLowerCase().includes(q) ||
+        (moduleColors[n.module]?.label||'').toLowerCase().includes(q)
+    ).slice(0, 12);
+    if(!matches.length) { searchResults.style.display = 'none'; return; }
+    searchResults.innerHTML = matches.map(n =>
+        `<div class="search-item" data-id="${n.id}">
+            <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${moduleColors[n.module]?.color};margin-right:6px;"></span>${n.label}</span>
+            <span class="si-module">${moduleColors[n.module]?.label || n.module} · ${n.fields} fields</span>
+        </div>`
+    ).join('');
+    searchResults.style.display = 'block';
+});
+
+searchResults.addEventListener('click', e => {
+    const item = e.target.closest('.search-item');
+    if(!item) return;
+    const id = item.dataset.id;
+    const node = nodes.find(n=>n.id===id);
+    if(!node) return;
+
+    // Zoom to node
+    const t = d3.zoomIdentity.translate(width/2 - node.x*1.5, height/2 - node.y*1.5).scale(1.5);
+    svg.transition().duration(600).call(zoom.transform, t);
+
+    selectedNode = id;
+    highlightConnections(node);
+    searchResults.style.display = 'none';
+    searchInput.value = node.label;
+});
+
+document.addEventListener('click', e => {
+    if(!e.target.closest('#search-container')) searchResults.style.display = 'none';
+});
+
+searchInput.addEventListener('keydown', e => {
+    if(e.key === 'Escape') { searchResults.style.display = 'none'; searchInput.blur(); }
+});
+
+// ===== MODULE FILTERS =====
+function showAll() {
+    document.querySelectorAll('#controls .btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('#controls .btn')[0].classList.add('active');
+    nodeGroups.style('display','block');
+    linkElements.style('display','block');
+    linkLabels.style('display','none');
+    resetHighlight(); clearPathHighlight();
+}
+
+function filterModule(group) {
+    document.querySelectorAll('#controls .btn').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+    const mods = moduleGroups[group] || [group];
+    const visibleIds = new Set();
+    nodes.forEach(n => { if(mods.includes(n.module)) visibleIds.add(n.id); });
+    links.forEach(l => {
+        const sid = l.source.id, tid = l.target.id;
+        if(visibleIds.has(sid)) visibleIds.add(tid);
+        if(visibleIds.has(tid)) visibleIds.add(sid);
+    });
+    nodeGroups.style('display', d => visibleIds.has(d.id) ? 'block' : 'none');
+    linkElements.style('display', l => visibleIds.has(l.source.id) && visibleIds.has(l.target.id) ? 'block' : 'none');
+    linkLabels.style('display','none');
+    resetHighlight(); clearPathHighlight();
+}
+
+function filterByModule(mod) {
+    const visibleIds = new Set();
+    nodes.forEach(n => { if(n.module===mod) visibleIds.add(n.id); });
+    links.forEach(l => {
+        if(visibleIds.has(l.source.id)) visibleIds.add(l.target.id);
+        if(visibleIds.has(l.target.id)) visibleIds.add(l.source.id);
+    });
+    nodeGroups.style('display', d => visibleIds.has(d.id) ? 'block' : 'none');
+    linkElements.style('display', l => visibleIds.has(l.source.id) && visibleIds.has(l.target.id) ? 'block' : 'none');
+    linkLabels.style('display','none');
+}
+
+simulation.on('tick', () => {
+    linkElements.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y)
+        .attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
+    linkLabels.attr('x',d=>(d.source.x+d.target.x)/2).attr('y',d=>(d.source.y+d.target.y)/2);
+    nodeGroups.attr('transform', d => `translate(${d.x},${d.y})`);
+});
+</script>
+</body>
+</html>
